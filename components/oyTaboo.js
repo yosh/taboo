@@ -167,15 +167,60 @@ function snapshot(win, outputWidth, outputHeight) {
   var w = p * realW;
   var h = p * realH;
 
-  canvas.setAttribute("width", Math.floor(w));
-  canvas.setAttribute("height", Math.floor(h));
+  if ("@mozilla.org/image/tools;1" in Components.classes) {
+    canvas.width = realW;
+    canvas.height = realH;
 
-  var ctx = canvas.getContext("2d");
-  ctx.scale(p, p);
-  ctx.drawWindow(content, content.scrollX, content.scrollY, realW, realH, "rgb(0,0,0)");
+    var ctx = canvas.getContext("2d");
+    ctx.drawWindow(content, content.scrollX, content.scrollY, realW, realH,
+                   "rgb(0,0,0)");
 
-  var imageData = canvas.toDataURL();
-  return win.atob(imageData.substr('data:image/png;base64,'.length));
+    var imageData = canvas.toDataURL("image/png", "transparency=none");
+    var pngData = atob(imageData.substr('data:image/png;base64,'.length));
+
+    // XXX: Is there a saner way than this?
+    var pipe = Cc["@mozilla.org/pipe;1"].createInstance(Ci.nsIPipe);
+    pipe.init(false, false, 0, 0xffffffff, null);
+
+    var bos = Cc["@mozilla.org/binaryoutputstream;1"]
+              .createInstance(Ci.nsIBinaryOutputStream);
+    bos.setOutputStream(pipe.outputStream);
+    bos.writeBytes(pngData, pngData.length);
+    bos.close();
+
+    var container = { value: null };
+
+    var imgtool = Cc["@mozilla.org/image/tools;1"].createInstance(Ci.imgITools);
+    imgtool.decodeImageData(pipe.inputStream, "image/png", container);
+
+    var scaled = imgtool.encodeScaledImage(container.value, "image/png", w, h);
+
+    var bis = Cc["@mozilla.org/binaryinputstream;1"]
+              .createInstance(Ci.nsIBinaryInputStream);
+    bis.setInputStream(scaled);
+
+    var outData = "";
+    var avail = bis.available();
+    while (avail) {
+      outData += bis.readBytes(avail);
+      avail = bis.available();
+    }
+
+    bis.close();
+
+    return outData;
+  } else {
+    canvas.setAttribute("width", Math.floor(w));
+    canvas.setAttribute("height", Math.floor(h));
+
+    var ctx = canvas.getContext("2d");
+    ctx.scale(p, p);
+    ctx.drawWindow(content, content.scrollX, content.scrollY, realW, realH,
+                   "rgb(0,0,0)");
+
+    var imageData = canvas.toDataURL();
+    return win.atob(imageData.substr('data:image/png;base64,'.length));
+  }
 }
 
 function cleanTabState(aState, aClearPrivateData) {
