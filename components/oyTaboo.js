@@ -143,26 +143,17 @@ TabooInfo.prototype = {
  */
 
 
-function snapshot(win, outputWidth, outputHeight) {
-  var content = win.content;
+function snapshot(win, tab, outputWidth, outputHeight) {
+  const ASPECT_RATIO = 0.8;
+
+  var content = tab.linkedBrowser.contentWindow;
 
   var canvas = win.document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
 
-  var realW = content.document.body ? content.document.body.clientWidth
-                                    : content.innerWidth;
-  if (!realW || realW == 0) {
-    realW = content.innerWidth;
-  }
-  var realH = content.innerHeight;
+  var realW = win.innerWidth;
+  var realH = realW * ASPECT_RATIO;
 
-  var pW = outputWidth * 1.0 / realW;
-  var pH = outputHeight * 1.0 / realH;
-
-  var p = pW;
-
-  if (pH < pW) {
-    p = pH;
-  }
+  var p = outputWidth / win.innerWidth;
 
   var w = p * realW;
   var h = p * realH;
@@ -632,8 +623,8 @@ TabooService.prototype = {
     var url = state.entries[state.index - 1].url;
     url = url.replace(/#.*$/, '');
 
-    var fullImage = snapshot(win, IMAGE_FULL_WIDTH, IMAGE_FULL_HEIGHT);
-    var thumbImage = snapshot(win, IMAGE_THUMB_WIDTH, IMAGE_THUMB_HEIGHT);
+    var fullImage = snapshot(win, selectedTab, IMAGE_FULL_WIDTH, IMAGE_FULL_HEIGHT);
+    var thumbImage = snapshot(win, selectedTab, IMAGE_THUMB_WIDTH, IMAGE_THUMB_HEIGHT);
 
     var exists = this._storage.save(url, aDescription, state,
                                     fullImage, thumbImage);
