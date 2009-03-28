@@ -430,8 +430,9 @@ function init() {
     }
   }
 
-  prefs = Cc['@mozilla.org/preferences-service;1'].
-    getService(Ci.nsIPrefService).getBranch('extensions.taboo.');
+  prefService = Cc['@mozilla.org/preferences-service;1'].
+    getService(Ci.nsIPrefService);
+  prefs = prefService.getBranch('extensions.taboo.');
 
   taboo = new Taboo();
 
@@ -456,6 +457,10 @@ function init() {
   }
 
   prefs.setCharPref("lastversion", version);
+
+  // Flush prefs to desk to be sure we remember lastversion
+  prefService.savePrefFile(null);
+
   if (pageURL && pageURL != "null") {
     setTimeout(function(){ window.openUILinkIn(pageURL, "tab"); }, STARTUP_SHOW_DELAY);
   }
